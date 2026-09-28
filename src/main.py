@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 
 from src.skill_extraction import (
@@ -12,6 +12,9 @@ from src.skill_extraction import (
 
 from src.resume_quality import get_resume_quality_result
 
+from src.resume_classifier import predict_resume_category
+
+from src.resume_parser import extract_text_from_pdf
 
 # --------------------------------------------------
 # Project paths
@@ -152,3 +155,95 @@ def resume_quality_analysis(request: ResumeTextRequest):
     )
 
     return result
+
+@app.post("/classify-resume")
+def classify_resume(request: ResumeTextRequest):
+
+    category = predict_resume_category(
+        request.resume_text
+    )
+
+    return {
+        "predicted_category": category
+    }
+
+@app.post("/upload-resume")
+async def upload_resume(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        return {
+            "status": "error",
+            "message": "Only PDF files are supported."
+        }
+
+    upload_directory = BASE_DIR / "temp"
+
+    upload_directory.mkdir(
+        exist_ok=True
+    )
+
+    file_path = upload_directory / file.filename
+
+    file_contents = await file.read()
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_contents)
+
+    resume_text = extract_text_from_pdf(
+        file_path
+    )
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "extracted_characters": len(resume_text),
+        "extracted_words": len(resume_text.split()),
+        "resume_text": resume_text
+    }
+
+@app.post("/upload-resume-skills")
+async def upload_resume_skills(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        return {
+            "status": "error",
+            "message": "Only PDF files are supported."
+        }
+
+    upload_directory = BASE_DIR / "temp"
+
+    upload_directory.mkdir(
+        exist_ok=True
+    )
+
+    file_path = upload_directory / file.filename
+
+    file_contents = await file.read()
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_contents)
+
+    # Extract text from PDF
+    resume_text = extract_text_from_pdf(
+        file_path
+    )
+
+    # Build skill vocabulary
+    skill_set = build_extraction_vocabulary(
+        skills_df
+    )
+
+    # Extract skills
+    skills = extract_and_classify_skills(
+        resume_text,
+        skill_set
+    )
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "extracted_characters": len(resume_text),
+        "extracted_words": len(resume_text.split()),
+        "total_skills": len(skills),
+        "skills": skills
+    }

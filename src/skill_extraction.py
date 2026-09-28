@@ -93,6 +93,75 @@ supplemental_professional_skills = {
     "healthcare",
 }
 
+# Generic terms that should not normally be extracted as skills.
+# These were identified during the skill-vocabulary cleaning process.
+
+generic_words = {
+    "advanced",
+    "analysis",
+    "analytical",
+    "application",
+    "applications",
+    "codes",
+    "collateral",
+    "conflict",
+    "customer",
+    "data",
+    "design",
+    "features",
+    "general",
+    "government",
+    "health",
+    "hospital",
+    "hotel",
+    "insurance",
+    "interpret",
+    "layout",
+    "management",
+    "office",
+    "operations",
+    "paperwork",
+    "participation",
+    "plan",
+    "policies",
+    "prevention",
+    "print",
+    "public",
+    "ratings",
+    "records",
+    "reporting",
+    "reviews",
+    "safety",
+    "sales",
+    "service",
+    "skills",
+    "statistics",
+    "system",
+    "teams",
+    "technology",
+    "terminology",
+    "training",
+    "transactions",
+    "website",
+    "organization",
+    "professional",
+    "responsibilities",
+    "experience",
+    "work",
+    "working",
+    "software",
+    "svg",
+}
+
+# Terms that should not be extracted as skills even when they
+# appear as multi-word entries in the source vocabulary.
+
+excluded_extraction_skills = {
+    "computer science",
+    "databases",
+    "email",
+    "models",
+}
 
 def normalize_text_aliases(text, aliases=None):
     """Normalize known spelling/format variants in one pass."""
@@ -184,7 +253,11 @@ def build_extraction_vocabulary(
     The important correction is that legitimate professional skills
     such as communication and customer service are explicitly retained.
     """
-    generic_words = set(generic_words or set())
+    generic_words = set(
+    generic_words
+    if generic_words is not None
+    else globals()["generic_words"]
+    )
     protected_skills = set(protected_skills or set())
 
     vocabulary = set(
@@ -204,12 +277,13 @@ def build_extraction_vocabulary(
     # Remove generic one-word noise, but preserve protected and
     # supplemental professional skills.
     vocabulary = {
-        skill for skill in vocabulary
-        if (
-            len(skill.split()) > 1
-            or skill in protected_skills
-            or skill in supplemental_professional_skills
-            or skill not in generic_words
+    skill for skill in vocabulary
+    if skill not in excluded_extraction_skills
+    and (
+        len(skill.split()) > 1
+        or skill in protected_skills
+        or skill in supplemental_professional_skills
+        or skill not in generic_words
         )
     }
 
