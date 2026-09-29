@@ -1,7 +1,6 @@
 from pathlib import Path
-
 import pandas as pd
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from pydantic import BaseModel
 
 from src.skill_extraction import (
@@ -9,11 +8,8 @@ from src.skill_extraction import (
     build_extraction_vocabulary,
     match_resume_to_jd
 )
-
 from src.resume_quality import get_resume_quality_result
-
 from src.resume_classifier import predict_resume_category
-
 from src.resume_parser import extract_text_from_pdf
 
 # --------------------------------------------------
@@ -246,4 +242,260 @@ async def upload_resume_skills(file: UploadFile = File(...)):
         "extracted_words": len(resume_text.split()),
         "total_skills": len(skills),
         "skills": skills
+    }
+
+@app.post("/upload-resume-quality")
+async def upload_resume_quality(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        return {
+            "status": "error",
+            "message": "Only PDF files are supported."
+        }
+
+    upload_directory = BASE_DIR / "temp"
+
+    upload_directory.mkdir(
+        exist_ok=True
+    )
+
+    file_path = upload_directory / file.filename
+
+    file_contents = await file.read()
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_contents)
+
+    # Extract resume text from PDF
+    resume_text = extract_text_from_pdf(
+        file_path
+    )
+
+    # Analyze resume quality
+    quality_result = get_resume_quality_result(
+        resume_text
+    )
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "extracted_characters": len(resume_text),
+        "extracted_words": len(resume_text.split()),
+        "quality_analysis": quality_result
+    }
+
+@app.post("/upload-resume-classify")
+async def upload_resume_classify(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        return {
+            "status": "error",
+            "message": "Only PDF files are supported."
+        }
+
+    upload_directory = BASE_DIR / "temp"
+    upload_directory.mkdir(exist_ok=True)
+
+    file_path = upload_directory / file.filename
+
+    file_contents = await file.read()
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_contents)
+
+    resume_text = extract_text_from_pdf(file_path)
+
+    predicted_category = predict_resume_category(
+        resume_text
+    )
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+        "extracted_characters": len(resume_text),
+        "extracted_words": len(resume_text.split()),
+        "predicted_category": predicted_category
+    }
+
+@app.post("/analyze-resume")
+async def analyze_resume(file: UploadFile = File(...)):
+
+    if file.content_type != "application/pdf":
+        return {
+            "status": "error",
+            "message": "Only PDF files are supported."
+        }
+
+    upload_directory = BASE_DIR / "temp"
+    upload_directory.mkdir(exist_ok=True)
+
+    file_path = upload_directory / file.filename
+
+    file_contents = await file.read()
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_contents)
+
+    # --------------------------------------------------
+    # Step 1: Extract resume text
+    # --------------------------------------------------
+
+    resume_text = extract_text_from_pdf(file_path)
+
+    # --------------------------------------------------
+    # Step 2: Build skill vocabulary
+    # --------------------------------------------------
+
+    skill_set = build_extraction_vocabulary(
+        skills_df
+    )
+
+    # --------------------------------------------------
+    # Step 3: Extract skills
+    # --------------------------------------------------
+
+    skills = extract_and_classify_skills(
+        resume_text,
+        skill_set
+    )
+
+    # --------------------------------------------------
+    # Step 4: Resume quality analysis
+    # --------------------------------------------------
+
+    quality_result = get_resume_quality_result(
+        resume_text
+    )
+
+    # --------------------------------------------------
+    # Step 5: Resume classification
+    # --------------------------------------------------
+
+    predicted_category = predict_resume_category(
+        resume_text
+    )
+
+    # --------------------------------------------------
+    # Final response
+    # --------------------------------------------------
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+
+        "resume": {
+            "extracted_characters": len(resume_text),
+            "extracted_words": len(resume_text.split())
+        },
+
+        "classification": {
+            "predicted_category": predicted_category
+        },
+
+        "skills": {
+            "total_skills": len(skills),
+            "skills": skills
+        },
+
+        "quality_analysis": quality_result
+    }
+
+@app.post("/screen-resume")
+async def screen_resume(
+    file: UploadFile = File(...),
+    job_description: str = Form(...)
+):
+
+    # --------------------------------------------------
+    # Step 1: Validate PDF
+    # --------------------------------------------------
+
+    if file.content_type != "application/pdf":
+        return {
+            "status": "error",
+            "message": "Only PDF files are supported."
+        }
+
+    # --------------------------------------------------
+    # Step 2: Validate Job Description
+    # --------------------------------------------------
+
+    if not job_description.strip():
+        return {
+            "status": "error",
+            "message": "Job description cannot be empty."
+        }
+
+    # --------------------------------------------------
+    # Step 3: Save uploaded PDF
+    # --------------------------------------------------
+
+    upload_directory = BASE_DIR / "temp"
+    upload_directory.mkdir(exist_ok=True)
+
+    file_path = upload_directory / file.filename
+
+    file_contents = await file.read()
+
+    with open(file_path, "wb") as buffer:
+        buffer.write(file_contents)
+
+    # --------------------------------------------------
+    # Step 4: Extract resume text
+    # --------------------------------------------------
+
+    resume_text = extract_text_from_pdf(file_path)
+
+    # --------------------------------------------------
+    # Step 5: Build skill vocabulary
+    # --------------------------------------------------
+
+    skill_set = build_extraction_vocabulary(
+        skills_df
+    )
+
+    # --------------------------------------------------
+    # Step 6: Match Resume with Job Description
+    # --------------------------------------------------
+    generic_jd_skills = {
+        "building",
+        "models"
+    }
+
+    match_result = match_resume_to_jd(
+        resume_text=resume_text,
+        job_description=job_description,
+        skill_set=skill_set,
+        generic_jd_skills=generic_jd_skills
+    )
+
+    # --------------------------------------------------
+    # Step 7: Return screening result
+    # --------------------------------------------------
+
+    return {
+        "status": "success",
+        "filename": file.filename,
+
+        "resume": {
+            "extracted_characters": len(resume_text),
+            "extracted_words": len(resume_text.split())
+        },
+
+        "job_description": {
+            "characters": len(job_description),
+            "words": len(job_description.split())
+        },
+
+        "screening_result": {
+            "total_resume_skills": match_result["total_resume_skills"],
+            "total_jd_skills": match_result["total_jd_skills"],
+            "matched_count": match_result["matched_count"],
+            "missing_count": match_result["missing_count"],
+            "additional_count": match_result["additional_count"],
+            "skill_match_percentage": match_result["skill_match_percentage"],
+            "matched_skills": match_result["matched_skills"],
+            "missing_skills": match_result["missing_skills"],
+            "additional_skills": match_result["additional_skills"]
+        }
     }

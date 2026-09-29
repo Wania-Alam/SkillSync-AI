@@ -112,10 +112,29 @@ def detect_section_headings(text, section_patterns):
             for pattern in patterns
         )
 
+        # Contact information can also be identified
+        # from an email address or phone number.
+        if section == "contact_information":
+
+            email_found = bool(
+                re.search(
+                    r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b",
+                    text
+                )
+            )
+
+            phone_found = bool(
+                re.search(
+                    r"(?:\+?\d[\d\s().-]{7,}\d)",
+                    text
+                )
+            )
+
+            detected = detected or email_found or phone_found
+
         detected_sections[section] = detected
 
     return detected_sections
-
 
 # --------------------------------------------------
 # Content length classification
