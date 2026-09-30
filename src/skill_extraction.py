@@ -151,6 +151,31 @@ generic_words = {
     "working",
     "software",
     "svg",
+    "building",
+    "campus",
+    "contribute",
+    "contributed",
+    "contributing",
+    "foundation",
+    "industry",
+    "languages",
+    "project",
+    "projects",
+    "suggestion",
+    "suggestions",
+    "workflow",
+    "volunteering",
+    "volunteer",
+    "experience",
+    "professional",
+    "development",
+    "software",
+    "engineering",
+    "programming",
+    "datasets",
+    "dataset",
+    "english",
+    "urdu",
 }
 
 # Terms that should not be extracted as skills even when they
@@ -189,27 +214,142 @@ def normalize_skill(skill):
 
 
 def extract_skills(text, skill_set, max_words=5):
-    """
-    Extract exact vocabulary matches using longest phrases first.
-
-    skill_set may be the cleaned dataset vocabulary plus the
-    supplemental professional vocabulary.
-    """
     text = str(text).lower()
+
     text = re.sub(r"[^a-z0-9+#.\- ]+", " ", text)
     text = re.sub(r"\s+", " ", text).strip()
 
-    words = [w.strip(".") for w in text.split() if w.strip(".")]
+    words = [
+        w.strip(".")
+        for w in text.split()
+        if w.strip(".")
+    ]
+
     found_skills = set()
 
+    # ---------------------------------------------------------
+    # Trusted single-word technical/professional skills
+    # ---------------------------------------------------------
+
+    trusted_single_word_skills = {
+        # Programming languages
+        "python",
+        "java",
+        "javascript",
+        "typescript",
+        "c",
+        "c++",
+        "c#",
+        "php",
+        "ruby",
+        "swift",
+        "kotlin",
+        "r",
+        "scala",
+        "perl",
+        "go",
+
+        # Databases
+        "sql",
+        "mysql",
+        "postgresql",
+        "mongodb",
+        "oracle",
+        "sqlite",
+        "redis",
+        "firebase",
+
+        # Data / ML
+        "numpy",
+        "pandas",
+        "tensorflow",
+        "pytorch",
+        "keras",
+        "scipy",
+        "matplotlib",
+        "seaborn",
+        "spark",
+        "hadoop",
+
+        # Cloud
+        "aws",
+        "azure",
+        "gcp",
+
+        # Development tools
+        "git",
+        "github",
+        "gitlab",
+        "docker",
+        "kubernetes",
+        "jenkins",
+
+        # Frameworks / technologies
+        "react",
+        "angular",
+        "vue",
+        "node.js",
+        "nodejs",
+        "django",
+        "flask",
+        "spring",
+        "laravel",
+
+        # Software / tools
+        "tableau",
+        "excel",
+        "powerbi",
+        "power",
+        "figma",
+        "photoshop",
+
+        # Technical concepts
+        "algorithm",
+        "algorithms",
+        "api",
+        "programming",
+        "networking",
+        "cybersecurity",
+        "automation",
+        "analytics",
+
+        # Professional skills
+        "leadership",
+        "communication",
+        "teamwork",
+        "negotiation",
+        "recruitment",
+        "administration",
+        "documentation",
+        "payroll",
+        
+    }
+
+    # ---------------------------------------------------------
+    # Find candidate phrases
+    # ---------------------------------------------------------
+
     for n in range(max_words, 0, -1):
+
         for i in range(len(words) - n + 1):
-            phrase = " ".join(words[i:i+n])
-            if phrase in skill_set:
-                found_skills.add(phrase)
+
+            phrase = " ".join(words[i:i + n])
+
+            if phrase not in skill_set:
+                continue
+
+            # -------------------------------------------------
+            # Single-word filtering
+            # -------------------------------------------------
+
+            if n == 1:
+
+                if phrase not in trusted_single_word_skills:
+                    continue
+
+            found_skills.add(phrase)
 
     return sorted(found_skills)
-
 
 def remove_overlapping_skills(skills):
     """Keep longer phrases when a shorter skill is contained in them."""
