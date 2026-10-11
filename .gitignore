@@ -32,22 +32,6 @@ __pycache__/
 
 data/raw/*.csv
 data/raw/skills/*.csv
-data/processed/*.csv
-
-# ==========================================
-# Machine Learning Models
-# ==========================================
-
-# Ignore trained/generated model files
-models/*.pkl
-models/*.pickle
-models/*.joblib
-models/*.h5
-models/*.keras
-models/*.pt
-models/*.pth
-models/*.onnx
-
 
 # ==========================================
 # Environment / Secret Files

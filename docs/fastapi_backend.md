@@ -1,6 +1,4 @@
-# Phase 11 — FastAPI Backend
-
-## Objective
+#  FastAPI Backend
 
 The objective of Phase 11 was to convert the machine learning and NLP components developed in the previous phases into a functional FastAPI backend.
 
